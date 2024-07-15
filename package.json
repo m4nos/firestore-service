@@ -1,0 +1,20 @@
+{
+  "name": "greece-wildfires-fetcher",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.2",
+    "csv-parse": "^5.5.6",
+    "firebase-admin": "^12.2.0",
+    "haversine-distance": "^1.2.3",
+    "node-cron": "^3.0.3"
+  }
+}
