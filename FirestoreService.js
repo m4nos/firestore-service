@@ -79,13 +79,15 @@ class FirestoreService {
     }
   }
 
-  filterData(newData, threshold = 1000) {
+  filterData(newData, threshold = 1000, proximityDistance = 10000) {
     return newData.filter((newEvent) => {
-      return ![...this.cache.values()].some((existingEvent) => {
-        const newMarkerCoords = {
-          latitude: parseFloat(newEvent.latitude),
-          longitude: parseFloat(newEvent.longitude),
-        };
+      const newMarkerCoords = {
+        latitude: parseFloat(newEvent.latitude),
+        longitude: parseFloat(newEvent.longitude),
+      };
+
+      // Check if the new marker is not within the threshold of existing markers
+      const isFarFromExistingMarkers = ![...this.cache.values()].some((existingEvent) => {
         const existingMarkerCoords = {
           latitude: parseFloat(existingEvent.latitude),
           longitude: parseFloat(existingEvent.longitude),
@@ -93,6 +95,19 @@ class FirestoreService {
         const distance = haversine(newMarkerCoords, existingMarkerCoords);
         return distance < threshold;
       });
+
+      // Check if the new marker has no neighboring markers within the proximityDistance
+      const hasNoNearbyMarkers = !newData.some((otherEvent) => {
+        if (otherEvent === newEvent) return false; // Skip the same event
+        const otherMarkerCoords = {
+          latitude: parseFloat(otherEvent.latitude),
+          longitude: parseFloat(otherEvent.longitude),
+        };
+        const distance = haversine(newMarkerCoords, otherMarkerCoords);
+        return distance < proximityDistance;
+      });
+
+      return isFarFromExistingMarkers && !hasNoNearbyMarkers;
     });
   }
 
