@@ -123,9 +123,21 @@ class FirestoreService {
     }
   }
 
+  #calculateThreeDaysAgo() {
+    const today = new Date();
+    today.setDate(today.getDate() - 2);
+
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+    const day = String(today.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  };
+
+
   async deleteOldMarkers() {
     try {
-      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+      const threeDaysAgo = this.#calculateThreeDaysAgo();
       const snapshot = await db.collection("markers").where("acq_date", "<", threeDaysAgo).get();
 
       if (snapshot.empty) {
@@ -141,7 +153,7 @@ class FirestoreService {
 
       await batch.commit();
       this.saveCacheToFile();
-      console.log(`${new Date()} Old markers deleted successfully.`);
+      console.log(`${new Date()} ${snapshot.docs.length} Old markers deleted successfully!`);
     } catch (error) {
       console.error(`${new Date()} Error deleting old markers:`, error);
     }
