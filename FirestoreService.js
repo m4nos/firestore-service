@@ -138,9 +138,9 @@ class FirestoreService {
     }
   }
 
-  #calculateThreeDaysAgo() {
+  #calculate24hoursAgo() {
     const today = new Date();
-    today.setDate(today.getDate() - 2);
+    today.setDate(today.getDate() - 1);
 
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-based
@@ -152,8 +152,8 @@ class FirestoreService {
 
   async deleteOldMarkers() {
     try {
-      const threeDaysAgo = this.#calculateThreeDaysAgo();
-      const snapshot = await db.collection("markers").where("acq_date", "<", threeDaysAgo).get();
+      const oneDayAgo = this.#calculate24hoursAgo();
+      const snapshot = await db.collection("markers").where("acq_date", "<", oneDayAgo).get();
 
       if (snapshot.empty) {
         console.log(`${new Date()} No old markers to delete.`);
