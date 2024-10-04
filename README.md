@@ -18,8 +18,6 @@ This repository contains the Firestore service for the Fire Alert application. I
 - [Installation](#installation)
 - [Setup](#setup)
 - [Usage](#usage)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Installation
 
