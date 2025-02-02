@@ -1,7 +1,7 @@
 # Firestore Service for Fire Alert
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Node.js](https://img.shields.io/badge/node.js-14.x-brightgreen)
+![Node.js](https://img.shields.io/badge/node.js-20.x-brightgreen)
 ![Firebase](https://img.shields.io/badge/firebase-9.x-orange)
 
 This repository contains the Firestore service for the Fire Alert application. It includes data fetching from the MODIS/VIIRS API, filtering, and storing wildfire data in Firestore, along with a cron job to delete old data.
