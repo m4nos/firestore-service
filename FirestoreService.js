@@ -79,7 +79,7 @@ class FirestoreService {
     }
   }
 
-  filterData(newData, threshold = 1000, proximityDistance = 10000) {
+  filterData(newData, threshold = 100, proximityDistance = 10000) {
     return newData.filter((newEvent) => {
       const newMarkerCoords = {
         latitude: parseFloat(newEvent.latitude),
@@ -124,7 +124,7 @@ class FirestoreService {
           const docRef = db.collection("markers").doc(); // Auto-generated ID
           batch.set(docRef, {
             ...data,
-            timestamp: new Date()
+            timestamp: new Date().getTime()
           });
           this.cache.set(docRef.id, data); // Update cache
         });
@@ -138,22 +138,10 @@ class FirestoreService {
     }
   }
 
-  #calculate24hoursAgo() {
-    const today = new Date();
-    today.setDate(today.getDate() - 1);
-
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-based
-    const day = String(today.getDate()).padStart(2, '0');
-
-    return `${year}-${month}-${day}`;
-  };
-
-
   async deleteOldMarkers() {
     try {
-      const oneDayAgo = this.#calculate24hoursAgo();
-      const snapshot = await db.collection("markers").where("acq_date", "<", oneDayAgo).get();
+      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      const snapshot = await db.collection("markers").where("timestamp", "<", oneDayAgo).get();
 
       if (snapshot.empty) {
         console.log(`${new Date()} No old markers to delete.`);
