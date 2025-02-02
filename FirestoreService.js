@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { MODIS_VIIRS_KEY } from "./keys.js";
 import serviceAccount from "./firebaseServiceAccountKey.json" with { type: "json" };
+import { getMessaging } from 'firebase-admin/messaging';
 
 const cacheFilePath = path.resolve('./markersCache.json');
 
@@ -25,6 +26,9 @@ class FirestoreService {
 
     this.cache = new Map();
     this.loadCacheFromFile();
+
+    // Initialize Firebase Cloud Messaging
+    this.messaging = getMessaging();
 
     FirestoreService.instance = this;
   }
@@ -111,6 +115,68 @@ class FirestoreService {
     });
   }
 
+  async sendNotificationToNearbyUsers(wildfireLocation) {
+    try {
+      // Get all users with FCM tokens
+      const usersSnapshot = await db.collection("users").get();
+      
+      const notificationPromises = usersSnapshot.docs.map(async (userDoc) => {
+        const userData = userDoc.data();
+        
+        // Skip users without location or FCM token
+        if (!userData.location || !userData.fcmToken) return;
+
+        const userCoords = {
+          latitude: userData.location.latitude,
+          longitude: userData.location.longitude
+        };
+
+        const wildfireCoords = {
+          latitude: parseFloat(wildfireLocation.latitude),
+          longitude: parseFloat(wildfireLocation.longitude)
+        };
+
+        // Calculate distance between user and wildfire (in meters)
+        const distance = haversine(userCoords, wildfireCoords);
+        
+        // If user is within 50km of the wildfire, send notification
+        if (distance <= 50000) {
+          const message = {
+            notification: {
+              title: 'Wildfire Alert! 🔥',
+              body: `A wildfire has been detected ${Math.round(distance / 1000)}km from your location.`
+            },
+            data: {
+              wildfireId: wildfireLocation.id,
+              distance: distance.toString(),
+              latitude: wildfireLocation.latitude.toString(),
+              longitude: wildfireLocation.longitude.toString()
+            },
+            token: userData.fcmToken
+          };
+
+          try {
+            await this.messaging.send(message);
+            console.log(`Notification sent to user ${userDoc.id}`);
+          } catch (error) {
+            if (error.code === 'messaging/registration-token-not-registered') {
+              // Token is invalid, remove it from the user's document
+              await userDoc.ref.update({
+                fcmToken: admin.firestore.FieldValue.delete()
+              });
+            } else {
+              console.error(`Error sending notification to user ${userDoc.id}:`, error);
+            }
+          }
+        }
+      });
+
+      await Promise.all(notificationPromises);
+    } catch (error) {
+      console.error('Error sending notifications:', error);
+    }
+  }
+
   async updateWildfireData() {
     try {
       const newWildfireData = await this.fetchWildfireData();
@@ -120,14 +186,21 @@ class FirestoreService {
         console.info(`${new Date()} No new data to be added. Fetched ${newWildfireData.length} results from FIRMS`);
       } else {
         const batch = db.batch();
-        filteredData.forEach((data) => {
-          const docRef = db.collection("markers").doc(); // Auto-generated ID
-          batch.set(docRef, {
+        
+        // Process each new wildfire
+        for (const data of filteredData) {
+          const docRef = db.collection("markers").doc();
+          const wildfireData = {
             ...data,
             timestamp: new Date().getTime()
-          });
-          this.cache.set(docRef.id, data); // Update cache
-        });
+          };
+          
+          batch.set(docRef, wildfireData);
+          this.cache.set(docRef.id, wildfireData);
+          
+          // Send notifications for each new wildfire
+          // await this.sendNotificationToNearbyUsers(wildfireData);
+        }
 
         await batch.commit();
         this.saveCacheToFile();
